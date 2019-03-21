@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CA</title>
+</head>
+<body>
+<h1>Local</h1>
+<h3>CA</h3>
+<div id="ca">
+    <p><span>Loaded CA: </span><span id="loadedca">null</span></p>
+    <p>
+        <span>certificate and key file</span>
+        <input id="cafiles" type="file" multiple>
+    </p>
+    <button id="caloadbutton">Load CA</button>
+</div>
+<h3>CSR</h3>
+<p>
+    <span>name:</span>
+    <input id="csrnameinput" type="text"/>
+    <button id="csrcreatebutton">Create New CSR</button>
+</p>
+<p>
+    <span id="csrname"></span>
+    <button id="csrpostbutton" disabled>POST</button>
+</p>
+
+<h3>KEY</h3>
+<div id="localkeylist"></div>
+
+<h1>Server</h1>
+
+<h3>CSR</h3>
+<div id="servercsrlist"></div>
+
+<h3>Certificate</h3>
+<div id="servercertlist"></div>
+
+</body>
+<script src="wasm_exec.js"></script>
+<script src="index.js"></script>
+</html>
