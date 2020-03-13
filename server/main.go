@@ -99,6 +99,9 @@ var db = &store{
 
 func main() {
 	http.Handle("/", http.FileServer(http.Dir("static")))
+	http.HandleFunc("/ca", func(w http.ResponseWriter, req *http.Request) {
+		http.ServeFile(w, req, "ca.cert")
+	})
 	http.HandleFunc("/csr/", func(w http.ResponseWriter, req *http.Request) {
 		name := req.URL.Path[5:]
 		if name == "" && req.Method == "GET" {

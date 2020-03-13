@@ -37,11 +37,14 @@ const serverCert = function () {
                     const button2 = document.createElement('button');
                     button2.innerText = 'download pfx';
                     button2.addEventListener('click', function () {
-                        fetch(`/cert/${name}`)
-                            .then(r => r.arrayBuffer())
-                            .then(cert => {
-                                const pfx = fromBase64(marshalPFX(toBase64(cert), toBase64(keys[name])));
-                                const file = new Blob([pfx]);
+                        Promise.all([
+                            fetch(`/cert/${name}`),
+                            fetch(`/ca`)
+                        ])
+                            .then(rs => Promise.all(rs.map(r => r.arrayBuffer())))
+                            .then(([cert, ca]) => {
+                                const pfx = marshalPFX(toBase64(cert), keys[name], toBase64(ca));
+                                const file = new Blob([fromBase64(pfx)]);
                                 const link = document.createElement('a');
                                 link.href = URL.createObjectURL(file);
                                 link.download = `${name}.pfx`;
