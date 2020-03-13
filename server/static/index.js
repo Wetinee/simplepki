@@ -8,6 +8,7 @@ const fromBase64 = function (str) {
 
 const serverCert = function () {
     const servercertlist = document.getElementById('servercertlist');
+    const keys = JSON.parse(localStorage.getItem('keys') || '{}');
     fetch('/cert/')
         .then(resp => resp.json())
         .then(names => {
@@ -26,12 +27,29 @@ const serverCert = function () {
                             const file = new Blob([cert]);
                             const link = document.createElement('a');
                             link.href = URL.createObjectURL(file);
-                            link.download = `${name}.cert`;
+                            link.download = `${name}.cer`;
                             link.click();
                         })
                 });
                 p.appendChild(span);
                 p.appendChild(button);
+                if (Object.keys(keys).includes(name)) {
+                    const button2 = document.createElement('button');
+                    button2.innerText = 'download pfx';
+                    button2.addEventListener('click', function () {
+                        fetch(`/cert/${name}`)
+                            .then(r => r.arrayBuffer())
+                            .then(cert => {
+                                const pfx = fromBase64(marshalPFX(toBase64(cert), toBase64(keys[name])));
+                                const file = new Blob([pfx]);
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(file);
+                                link.download = `${name}.pfx`;
+                                link.click();
+                            });
+                    });
+                    p.appendChild(button2);
+                }
                 servercertlist.appendChild(p);
             });
         });
