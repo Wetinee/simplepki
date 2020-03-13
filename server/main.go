@@ -188,8 +188,6 @@ func main() {
 	server := &http.Server{
 		Addr: ":4433",
 		TLSConfig: &tls.Config{
-			ClientAuth: tls.RequireAndVerifyClientCert,
-			ClientCAs:  clientCAs,
 			MinVersion: tls.VersionTLS13,
 		},
 	}
