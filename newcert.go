@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags|log.Lshortfile)
 	ca, err := pki.LoadX509KeyPair("ca.cert", "ca.key")
 	if err != nil {
 		log.Fatal(err)
@@ -32,10 +33,13 @@ func newCert(ca tls.Certificate, name string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	pki.SaveCertificate(name+".cert", certificate)
+	err = ioutil.WriteFile(name+".cert", certificate, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 	pki.SavePrivateKey(name+".key", privkey)
 
-	cert, err := x509.ParseCertificate(certificate)
+	cert, err := pki.Certificate(certificate)
 	if err != nil {
 		log.Fatal(err)
 	}

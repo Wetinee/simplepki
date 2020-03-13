@@ -132,7 +132,7 @@ func NewCA(commonName, certFilename, keyFilename string) {
 	}
 
 	SavePrivateKey(keyFilename, privkey)
-	SaveCertificate(certFilename, cert)
+	saveCertificate(certFilename, cert)
 }
 
 func SavePrivateKey(filename string, key interface{}) {
@@ -147,7 +147,7 @@ func SavePrivateKey(filename string, key interface{}) {
 	}
 }
 
-func SaveCertificate(filename string, cert []byte) {
+func saveCertificate(filename string, cert []byte) {
 	err := ioutil.WriteFile(filename, pem.EncodeToMemory(
 		&pem.Block{Type: "CERTIFICATE", Bytes: cert}), 0644)
 	if err != nil {
