@@ -34,6 +34,11 @@ const serverCert = function () {
                 p.appendChild(span);
                 p.appendChild(button);
                 if (Object.keys(keys).includes(name)) {
+                    const pwLabel = document.createElement('span');
+                    pwLabel.innerText = 'password';
+                    p.appendChild(pwLabel);
+                    const pw = document.createElement('input');
+                    p.appendChild(pw);
                     const button2 = document.createElement('button');
                     button2.innerText = 'download pfx';
                     button2.addEventListener('click', function () {
@@ -43,7 +48,7 @@ const serverCert = function () {
                         ])
                             .then(rs => Promise.all(rs.map(r => r.arrayBuffer())))
                             .then(([cert, ca]) => {
-                                const pfx = marshalPFX(toBase64(cert), keys[name], toBase64(ca));
+                                const pfx = marshalPFX(toBase64(cert), keys[name], toBase64(ca), pw.value);
                                 const file = new Blob([fromBase64(pfx)]);
                                 const link = document.createElement('a');
                                 link.href = URL.createObjectURL(file);

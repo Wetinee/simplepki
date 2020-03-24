@@ -87,6 +87,7 @@ func marshalPFX(this js.Value, args []js.Value) interface{} {
 	cert, err1 := base64.StdEncoding.DecodeString(args[0].String())
 	key, err2 := base64.StdEncoding.DecodeString(args[1].String())
 	ca, err3 := base64.StdEncoding.DecodeString(args[2].String())
+	password := args[3].String()
 	if err1 != nil || err2 != nil || err3 != nil {
 		log.Println(err1, err2)
 		return nil
@@ -102,7 +103,7 @@ func marshalPFX(this js.Value, args []js.Value) interface{} {
 		log.Println(err)
 		return nil
 	}
-	pfxData, err := pkcs12.Encode(rand.Reader, cer.PrivateKey, cer.Leaf, []*x509.Certificate{cacert}, "")
+	pfxData, err := pkcs12.Encode(rand.Reader, cer.PrivateKey, cer.Leaf, []*x509.Certificate{cacert}, password)
 	if err != nil {
 		log.Println(err)
 		return nil
