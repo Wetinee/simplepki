@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
@@ -98,10 +96,6 @@ var db = &store{
 }
 
 func main() {
-	http.Handle("/", http.FileServer(http.Dir("static")))
-	http.HandleFunc("/ca", func(w http.ResponseWriter, req *http.Request) {
-		http.ServeFile(w, req, "ca.cert")
-	})
 	http.HandleFunc("/csr/", func(w http.ResponseWriter, req *http.Request) {
 		name := req.URL.Path[5:]
 		if name == "" && req.Method == "GET" {
@@ -142,8 +136,8 @@ func main() {
 			}
 		}
 	})
-	http.HandleFunc("/cert/", func(w http.ResponseWriter, req *http.Request) {
-		name := req.URL.Path[6:]
+	http.HandleFunc("/cer/", func(w http.ResponseWriter, req *http.Request) {
+		name := req.URL.Path[5:]
 		if name == "" && req.Method == "GET" {
 			err := json.NewEncoder(w).Encode(db.ListCert())
 			if err != nil {
@@ -182,18 +176,6 @@ func main() {
 			}
 		}
 	})
-	cer, err := pki.LoadCertificate("ca.cert")
-	if err != nil {
-		log.Fatal(err)
-	}
-	clientCAs := x509.NewCertPool()
-	clientCAs.AddCert(cer)
-	server := &http.Server{
-		Addr: ":4433",
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS13,
-		},
-	}
-	err = server.ListenAndServeTLS("server.cert", "server.key")
+	err := http.ListenAndServe(":44332", nil)
 	log.Fatal(err)
 }

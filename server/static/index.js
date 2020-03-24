@@ -6,10 +6,10 @@ const fromBase64 = function (str) {
     return Uint8Array.from(atob(str), c => c.charCodeAt(0));
 };
 
-const serverCert = function () {
+const serverCert = function (cacerfile) {
     const servercertlist = document.getElementById('servercertlist');
     const keys = JSON.parse(localStorage.getItem('keys') || '{}');
-    fetch('/cert/')
+    fetch('/cer/')
         .then(resp => resp.json())
         .then(names => {
             servercertlist.innerText = '';
@@ -21,7 +21,7 @@ const serverCert = function () {
                 const button = document.createElement('button');
                 button.innerText = 'download';
                 button.addEventListener('click', function () {
-                    fetch(`/cert/${name}`)
+                    fetch(`/cer/${name}`)
                         .then(r => r.arrayBuffer())
                         .then(cert => {
                             const file = new Blob([cert]);
@@ -42,13 +42,10 @@ const serverCert = function () {
                     const button2 = document.createElement('button');
                     button2.innerText = 'download pfx';
                     button2.addEventListener('click', function () {
-                        Promise.all([
-                            fetch(`/cert/${name}`),
-                            fetch(`/ca`)
-                        ])
-                            .then(rs => Promise.all(rs.map(r => r.arrayBuffer())))
-                            .then(([cert, ca]) => {
-                                const pfx = marshalPFX(toBase64(cert), keys[name], toBase64(ca), pw.value);
+                        fetch(`/cer/${name}`)
+                            .then(r => r.arrayBuffer())
+                            .then(cer => {
+                                const pfx = marshalPFX(toBase64(cer), keys[name], toBase64(cacerfile), pw.value);
                                 const file = new Blob([fromBase64(pfx)]);
                                 const link = document.createElement('a');
                                 link.href = URL.createObjectURL(file);
@@ -63,7 +60,7 @@ const serverCert = function () {
         });
 };
 
-const serverCSR = function () {
+const serverCSR = function (cacerfile) {
     const servercsrlist = document.getElementById('servercsrlist');
     fetch('/csr/')
         .then(resp => resp.json())
@@ -88,13 +85,13 @@ const serverCSR = function () {
                         .then(csr => {
                             csr = toBase64(csr);
                             const cert = sign(ca.cert, ca.key, csr);
-                            return fetch(`/cert/${name}`, {
+                            return fetch(`/cer/${name}`, {
                                 method: 'POST',
                                 body: fromBase64(cert),
                             })
                         })
-                        .then(serverCSR)
-                        .then(serverCert);
+                        .then(() => serverCSR(cacerfile))
+                        .then(() => serverCert(cacerfile));
                 });
                 p.appendChild(span);
                 p.appendChild(button);
@@ -103,7 +100,7 @@ const serverCSR = function () {
         })
 };
 
-function localCSR() {
+function localCSR(cacerfile) {
     const csrcreatebutton = document.getElementById('csrcreatebutton');
     const csrnameinput = document.getElementById('csrnameinput');
     const csrname = document.getElementById('csrname');
@@ -129,9 +126,9 @@ function localCSR() {
                 if (resp.status === 200) {
                     localStorage.removeItem('csr');
                     refreshCSR();
-                    serverCSR();
+                    serverCSR(cacerfile);
                 } else {
-                    alert(resp.statusText)
+                    return resp.text().then(body => Promise.reject(body));
                 }
             }).catch(e => alert(e));
     });
@@ -144,13 +141,13 @@ function localCSR() {
             keys[name] = csr.key;
             localStorage.setItem('keys', JSON.stringify(keys));
             refreshCSR();
-            localKey();
+            localKey(cacerfile);
         }
     });
     refreshCSR();
 }
 
-const localKey = function () {
+const localKey = function (cacerfile) {
     const localkeylist = document.getElementById('localkeylist');
     const keys = JSON.parse(localStorage.getItem('keys') || '{}');
     localkeylist.innerText = '';
@@ -161,7 +158,6 @@ const localKey = function () {
         const button = document.createElement('button');
         button.innerText = 'download';
         button.addEventListener('click', function () {
-            console.log(keys);
             const file = new Blob([fromBase64(keys[name])]);
             const link = document.createElement('a');
             link.href = URL.createObjectURL(file);
@@ -174,10 +170,9 @@ const localKey = function () {
     })
 };
 
-const localCA = function () {
+const localCA = function (cacerfile) {
     const loadedca = document.getElementById('loadedca');
-    const cafiles = document.getElementById("cafiles");
-    const caloadbutton = document.getElementById("caloadbutton");
+    const cakeyfile = document.getElementById('cakeyfile');
     const refreshCA = function () {
         let ca = localStorage.getItem('ca');
         if (ca != null) {
@@ -186,16 +181,18 @@ const localCA = function () {
         }
     };
     refreshCA();
-    caloadbutton.addEventListener('click', function () {
-        const files = cafiles.files;
-        if (files.length !== 2) {
-            console.log('need two files');
+    cakeyfile.addEventListener('change', function () {
+        const keyfile = cakeyfile.files[0];
+        if (keyfile == null) {
+            console.log('need key file');
             return;
         }
-        Promise.all([files[0].arrayBuffer(), files[1].arrayBuffer()])
-            .then(([f1, f2]) => {
-                const ca = getCAInfo(toBase64(f1), toBase64(f2));
-                localStorage.setItem('ca', JSON.stringify(ca));
+        keyfile.arrayBuffer()
+            .then(keyfile => {
+                const ca = getCAInfo(toBase64(cacerfile), toBase64(keyfile));
+                if (ca != null) {
+                    localStorage.setItem('ca', JSON.stringify(ca));
+                }
                 refreshCA();
             });
     })
@@ -204,13 +201,20 @@ const localCA = function () {
 const go = new Go();
 WebAssembly.instantiateStreaming(fetch("cert.wasm"), go.importObject)
     .then(result => {
-        setTimeout(function () {
-            localCA();
-            localCSR();
-            localKey();
-            serverCSR();
-            serverCert();
-        }, 100);
+        fetch('/ca.cer')
+            .then(resp => resp.arrayBuffer())
+            .then(cacerfile => {
+                localCA(cacerfile);
+                localCSR(cacerfile);
+                localKey(cacerfile);
+                serverCSR(cacerfile);
+                serverCert(cacerfile);
+                const refresh = document.getElementById('refreshserver');
+                refresh.addEventListener('click', function () {
+                    serverCSR(cacerfile);
+                    serverCert(cacerfile);
+                });
+            });
         return go.run(result.instance);
     });
 
