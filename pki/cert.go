@@ -18,7 +18,7 @@ import (
 func Certificate(certPEMBlock []byte) (*x509.Certificate, error) {
 	certDERBlock, _ := pem.Decode(certPEMBlock)
 	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
-		log.Fatal("failed to read the CA certificate: unexpected content")
+		return nil, errors.New("failed to read the certificate: unexpected content")
 	}
 	cer, err := x509.ParseCertificate(certDERBlock.Bytes)
 	return cer, err
